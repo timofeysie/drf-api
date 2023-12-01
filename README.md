@@ -1,5 +1,75 @@
 ![CI logo](https://codeinstitute.s3.amazonaws.com/fullstack/ci_logo_small.png)
 
+# Django Rest Framework API
+
+The DRF-API project is based on the Code Institute Django REST Framework module.
+
+## Starting the project
+
+Install the specific version of Django needed for the course.
+
+Start the project and install the dependencies.
+
+```shell
+> pip3 install 'django<4'
+> django-admin startproject drf_api .
+> pip install django-cloudinary-storage
+> pip install pillow
+Requirement already satisfied: Pillow in c:\users\timof\appdata\local\programs\python\python310\lib\site-packages (10.1.0)
+```
+
+The Django Cloudinary storage library connects Django to a service that will host the images for the API.
+
+The Pillow library adds image processing capabilities that needed for working with Cloudinary.
+
+Add the apps to the drf_api\settings.py file.  The app names need to be in this particular order
+
+with django.contrib.staticfiles between  cloudinary_storage and Cloudinary.
+
+drf_api\settings.py
+
+```py
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'cloudinary_storage',
+    'django.contrib.staticfiles',
+    'cloudinary',
+]
+```
+
+Next create the env.py file in the top directory to use the Cloudinary API key:
+
+```py title="env.py"
+import os
+os.environ['CLOUDINARY_URL'] = 'CLOUDINARY_URL=cloudinary://...'
+```
+
+In settings.py again load the environment variable needed to set a variable called CLOUDINARY_STORAGE.
+Use the environment variable set in the env.py file to declare that value.
+Define a setting called MEDIA_URL, which is the standard Django folder to store media so the settings know where to put image files.
+Also set a DEFAULT_FILE_STORAGE variable.
+
+```py title="drf_api\settings.py"
+from pathlib import Path
+import os
+
+if os.path.exists('env.py'):
+    import env
+
+CLOUDINARY_STORAGE = {
+    'CLOUDINARY_URL': os.environ.get('CLOUDINARY_URL')
+}
+
+MEDIA_URL = '/media/'
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+```
+
+## Original Readme
+
 Welcome USER_NAME,
 
 This is the Code Institute student template for Gitpod. We have preinstalled all of the tools you need to get started. It's perfectly ok to use this template as the basis for your project submissions.
