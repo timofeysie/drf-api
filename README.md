@@ -4,6 +4,17 @@
 
 The DRF-API project is based on the Code Institute Django REST Framework module.
 
+## Workflow
+
+```shell
+python manage.py runserver
+python manage.py migrate
+python manage.py makemigrations xyz
+python manage.py shell # Use quit() or Ctrl-Z plus Return to exit
+python manage.py createsuperuser
+python manage.py test zyx # run the sample test
+```
+
 ## Starting the project
 
 Install the specific version of Django needed for the course.
@@ -66,6 +77,166 @@ CLOUDINARY_STORAGE = {
 
 MEDIA_URL = '/media/'
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+```
+
+## Create the profile app
+
+```shell
+python manage.py startapp profiles
+Traceback (most recent call last):
+  File "C:\Users\timof\repos\django\drf-api\manage.py", line 22, in <module>
+    main()
+  File "C:\Users\timof\repos\django\drf-api\manage.py", line 18, in main
+    execute_from_command_line(sys.argv)
+  File "C:\Users\timof\AppData\Local\Programs\Python\Python310\lib\site-packages\django\core\management\__init__.py", line 419, in execute_from_command_line
+    utility.execute()
+  File "C:\Users\timof\AppData\Local\Programs\Python\Python310\lib\site-packages\django\core\management\__init__.py", line 395, in execute
+    django.setup()
+  File "C:\Users\timof\AppData\Local\Programs\Python\Python310\lib\site-packages\django\__init__.py", line 24, in setup
+    apps.populate(settings.INSTALLED_APPS)
+  File "C:\Users\timof\AppData\Local\Programs\Python\Python310\lib\site-packages\django\apps\registry.py", line 91, in populate
+    app_config = AppConfig.create(entry)
+  File "C:\Users\timof\AppData\Local\Programs\Python\Python310\lib\site-packages\django\apps\config.py", line 224, in create
+    import_module(entry)
+  File "C:\Users\timof\AppData\Local\Programs\Python\Python310\lib\importlib\__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 688, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 883, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed        
+  File "C:\Users\timof\AppData\Local\Programs\Python\Python310\lib\site-packages\cloudinary\__init__.py", line 219, in <module>
+  File "C:\Users\timof\AppData\Local\Programs\Python\Python310\lib\site-packages\cloudinary\__init__.py", line 216, in _load_config_from_env
+    self._load_from_url(os.environ.get("CLOUDINARY_URL"))
+  File "C:\Users\timof\AppData\Local\Programs\Python\Python310\lib\site-packages\cloudinary\__init__.py", line 166, in _load_from_url
+    return self._setup_from_parsed_url(parsed_url)
+  File "C:\Users\timof\AppData\Local\Programs\Python\Python310\lib\site-packages\cloudinary\__init__.py", line 154, in _setup_from_parsed_url
+    config_from_parsed_url = self._config_from_parsed_url(parsed_url)
+  File "C:\Users\timof\AppData\Local\Programs\Python\Python310\lib\site-packages\cloudinary\__init__.py", line 189, in _config_from_parsed_url
+    raise ValueError("Invalid CLOUDINARY_URL scheme. Expecting to start with 'cloudinary://'")
+ValueError: Invalid CLOUDINARY_URL scheme. Expecting to start with 'cloudinary://'
+```
+
+The above error is because the copied key from cloudinary contained the key name.
+
+Change this:
+
+```py
+os.environ['CLOUDINARY_URL'] = 'CLOUDINARY_URL=cloudinary:/...```
+```
+
+to this:
+
+```py
+os.environ['CLOUDINARY_URL'] = 'cloudinary:/
+```
+
+Then the command works as expected.
+
+### The Profile Model
+
+Create our Profile model with a one-to-one field pointing to a User instance and store the images in the database.
+
+Create a Meta class that will return a Profile instances with most recently created is first.  
+
+In the dunder string method return  information about who the profile owner is.
+
+To ensure that a  profile is created every time a user is created use signals notifications that get triggered when a  
+user is created.
+
+```py title=models.py
+from django.db import models
+from django.db.models.signals import post_save
+from django.contrib.auth.models import User
+
+class Profile(models.Model):
+    owner = models.OneToOneField(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    name = models.CharField(max_length=255, blank=True)
+    content = models.TextField(blank=True)
+    image = models.ImageField(
+        upload_to='images/', default='../cld-sample-5'
+    )
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.owner}'s profile"
+
+def create_profile(sender, instance, created, **kwargs):
+    if created:
+        Profile.objects.create(owner=instance)
+
+post_save.connect(create_profile, sender=User)
+```
+
+Note the original file is [located in the moments repo](https://github.com/Code-Institute-Solutions/drf-api/blob/master/profiles/models.py).
+
+Register the Profile model in admin.py:2
+
+```py
+from django.contrib import admin
+from .models import Profile
+
+admin.site.register(Profile)
+```
+
+Then run make migrations whihc you have to do after updating a model:
+
+```shell
+python manage.py makemigrations
+```
+
+Create a admin user and provide a password:
+
+```shell
+python manage.py createsuperuser
+
+You have 19 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): admin, auth, contenttypes, profiles, sessions.
+Run 'python manage.py migrate' to apply them.
+Traceback (most recent call last):
+  File "C:\Users\timof\AppData\Local\Programs\Python\Python310\lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    return self.cursor.execute(sql, params)
+  File "C:\Users\timof\AppData\Local\Programs\Python\Python310\lib\site-packages\django\db\backends\sqlite3\base.py", line 423, in execute
+    return Database.Cursor.execute(self, query, params)
+sqlite3.OperationalError: no such table: auth_user
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\timof\repos\django\drf-api\manage.py", line 22, in <module>
+    main()
+  File "C:\Users\timof\repos\django\drf-api\manage.py", line 18, in main
+    execute_from_command_line(sys.argv)
+  ...
+    return self.cursor.execute(sql, params)
+  File "C:\Users\timof\AppData\Local\Programs\Python\Python310\lib\site-packages\django\db\backends\sqlite3\base.py", line 423, in execute
+    return Database.Cursor.execute(self, query, params)
+django.db.utils.OperationalError: no such table: auth_user
+```
+
+This error was becuase I missed the second command:
+
+```shell
+python manage.py makemigrations
+python manage.py migrate
+```
+
+Run the server:
+
+```shell
+python manage.py runserver
+```
+
+Goto the admin url: http://127.0.0.1:8000/admin
+
+Create a file with the dependencies:
+
+```shell
+pip freeze > requirements.txt
 ```
 
 ## Original Readme
