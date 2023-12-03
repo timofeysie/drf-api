@@ -541,6 +541,46 @@ The profile/1 returns:
 }
 ```
 
+### Edit a profile
+
+Here is what the PUT looks like:
+
+```py
+    def put(self, request, pk):
+        profile = self.get_object(pk)
+        serializer = ProfileSerializer(profile, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, statue=status.HTTP_400_BAD_REQUEST)
+```
+
+This works, but the rest framework will automatically render a form based on  the fields we defined in our ProfileSerializer if we set the serializer_class attribute on our ProfileDetail view
+
+In the video, it looks like this:
+
+```py
+    def put(self, request, pk):
+        serializer_class = ProfileSerializer
+```
+
+But the serializer_class is never used in the method.  And it doesn't work.
+
+ChatGPT suggests this:
+
+```py
+serializer = self.serializer_class(profile, data=request.data)
+```
+
+That doesn't work, but asking again, it points out it should be inside the class definition, not the method definition:
+
+```py
+class ProfileDetail(APIView):
+    serializer_class = ProfileSerializer
+```
+
+Now a proper form appears.
+
 ## Useful links
 
 - The official docs for [Django REST framework](https://www.django-rest-framework.org/)
