@@ -699,6 +699,124 @@ The API for listing, retrieving and updating posts will is similar to the profil
 
 I guess it would include scaffolding like this: ```python manage.py startapp posts``` then adding urls.py.
 
+## JWT
+
+I have bunched the changes for installing and configuring JTWs in this section.
+
+Instead of the command pip3 install dj-rest-auth, use dj-rest-auth==2.1.9:
+
+```shell
+pip3 install dj-rest-auth==2.1.9
+pip install 'dj-rest-auth[with-social]'
+pip install djangorestframework-simplejwt
+```
+
+Much of this section is following [the installation instructions](https://dj-rest-auth.readthedocs.io/en/latest/installation.html) for dj-rest-auth.  JWTs allow the server to be stateless, which is a big part of a rest framework.
+
+```py
+INSTALLED_APPS = [
+    ...
+    'rest_framework',
+    'rest_framework.authtoken',
+    'dj_rest_auth',
+    'django.contrib.sites',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'dj_rest_auth.registration',
+```
+
+```py
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('api-auth/', include('rest_framework.urls')),
+    path('dj-rest-auth/', include('dj_rest_auth.urls')),
+    path(
+        'dj-rest-auth/registration/', include('dj_rest_auth.registration.urls')
+    ),
+    path('', include('profiles.urls')),
+]
+```
+
+Create drf_api/serializers.py
+
+Paste the code from the docs:
+
+```py
+from dj_rest_auth.serializers import UserDetailsSerializer
+from rest_framework import serializers
+
+class CurrentUserSerializer(UserDetailsSerializer):
+    profile_id = serializers.ReadOnlyField(source='profile.id')
+    profile_image = serializers.ReadOnlyField(source='profile.image.url')
+
+    class Meta(UserDetailsSerializer.Meta):
+        fields = UserDetailsSerializer.Meta.fields + (
+            'profile_id', 'profile_image'
+        )
+```
+
+Run migrations:
+
+```shell
+python manage.py migrate
+...
+ModuleNotFoundError: No module named 'allauth'
+```
+
+For some reason there is no transcript on this video, so I can't search for allauth in that.
+
+The lib is shown in the [GitHub repo linked to](https://github.com/Code-Institute-Solutions/drf-api/tree/c637122d1a559139cabf1d39b0a3281814091d79).
+
+'allauth' is shown in the settings.py after running this command: pip install 'dj-rest-auth[with-social]'
+
+In docs linked to, it says:
+
+### Registration (optional)
+
+1. *If you want to enable standard registration process you will need to install django-allauth by using pip install 'dj-rest-auth[with_social]'.*
+2. *Add django.contrib.sites, allauth, allauth.account, allauth.socialaccount and dj_rest_auth.registration apps to INSTALLED_APPS in your django settings.py:*
+3. *Add SITE_ID = 1 to your django settings.py*
+
+All of this looks good.  So how to fix that error?
+
+pip install django-allauth
+
+However, I still see this migration error:
+
+```sh
+$ python manage.py migrate
+...
+ImportError: allauth needs to be added to INSTALLED_APPS.
+```
+
+But the INSTALLED_APPS looks good to me:
+
+```py
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'cloudinary_storage',
+    'django.contrib.staticfiles',
+    'cloudinary',
+    'rest_framework',
+    'rest_framework.authtoken',
+    'dj_rest_auth',
+    'django.contrib.sites',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'dj_rest_auth.registration',
+
+    'profiles',
+]
+```
+
+ChatGPT is unable to help anymore, so might have to seek out a human for this one.
+
 ## Useful links
 
 - The official docs for [Django REST framework](https://www.django-rest-framework.org/)
