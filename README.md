@@ -406,6 +406,147 @@ Now with the server running refresh the preview window and the JSON user list is
 
 Time to update dependencies, git add, commit and push all the changes to GitHub.
 
+## Populating Serializer ReadOnly Field using dot notation
+
+This section begins with a discussion of the ‘source’ attribute in the serializer.
+
+In the ProfileSerializer, dot notation is used to populate the owner ReadOnlyField:
+
+```py
+class ProfileSerializer(serializers.ModelSerializer):
+    owner = serializers.ReadOnlyField(source='owner.username')
+```
+
+The User and Profile tables are connected through the owner ```OneToOne``` field in the models.py:
+
+```py
+class Profile(models.Model):
+    owner = models.OneToOneField(User, on_delete=models.CASCADE)
+```
+
+By default, the owner field always returns the user’s id value.
+
+To make this clear we can overwrite the default behavior to return username instead using ```owner.username```
+
+How you would access the profile name field if you were working in the Post serializer?
+
+```py
+profile_name = serializers.ReadOnlyField(source='owner.profile.name')
+```
+
+To add the profile image field to each post, we need to access a sub-attribute, so it would look like this:
+
+```py
+profile_image = serializers.ReadOnlyField(source='owner.profile.image.url')
+```
+
+## Profile Details View CRUD: GET and PUT
+
+The REST endpoints for the profiles API look like this:
+
+### List View
+
+- /profiles GET list profiles
+- /profiles POST create profile
+
+### Detail View
+
+- /profiles/:id GET get profile by id
+- /profiles/:id PUT update profile by id
+- /profiles/:id DELETE profile by id
+
+The delete endpoints will not be covered in this module, so now we will implement the GET & PUT endpoints.
+
+I notice that the ProfileDetail class in [the repo](https://github.com/Code-Institute-Solutions/drf-api/blob/master/profiles/views.py) is a bit different from what is shown in the tutorial.
+
+In this project, we use ```APIView```.  Note pk = Primary Key.
+
+```py
+class ProfileDetail(APIView):
+    def get_object(self, pk):
+        try:
+            profile = Profile.objects.get(pk=pk)
+            return profile
+        except Profile.DoesNotExist:
+            raise Http404
+```
+
+In the repo, it has ```generics.RetrieveUpdateAPIView```
+
+```py
+class ProfileDetail(generics.RetrieveUpdateAPIView):
+    permission_classes = [IsOwnerOrReadOnly]
+    queryset = Profile.objects.annotate(
+        posts_count=Count('owner__post', distinct=True),
+        followers_count=Count('owner__followed', distinct=True),
+        following_count=Count('owner__following', distinct=True)
+    ).order_by('-created_at')
+    serializer_class = ProfileSerializer
+```
+
+I guess that will come when permissions are introduced later.
+
+Not that it says "raise Http404".  I mistakenly used 'return' at first and it would return a 200 instead of a 404.
+
+The GET looks like this:
+
+```py
+    def get(self, request, pk):
+        profile = self.get_object(pk)
+        serializer = ProfileSerializer(profile)
+        return Response(serializer.data)
+```
+
+I'm not exactly sure why the pk is used differently in both methods:
+
+- profile = Profile.objects.get(pk=pk)
+- profile = self.get_object(pk)
+
+Next, add the details url in profiles/urls.py to use the new class:
+
+```py
+urlpatterns = [
+    path('profiles/', views.ProfileList.as_view()),
+    path('profile/<int:pk>/', views.ProfileDetail.as_view()),
+]
+```
+
+After this, running the server again, the profiles/ returns this:
+
+```json
+[
+    {
+        "id": 1,
+        "owner": "timof",
+        "created_at": "2023-12-02T01:18:52.483047Z",
+        "updated_at": "2023-12-02T01:18:52.483047Z",
+        "name": "",
+        "content": "",
+        "image": "https://res.cloudinary.com/dr3am91m4/image/upload/v1/media/../cld-sample-5"
+    }
+]
+```
+
+The profile/1 returns:
+
+```json
+{
+    "id": 1,
+    "owner": "timof",
+    "created_at": "2023-12-02T01:18:52.483047Z",
+    "updated_at": "2023-12-02T01:18:52.483047Z",
+    "name": "",
+    "content": "",
+    "image": "https://res.cloudinary.com/dr3am91m4/image/upload/v1/media/../cld-sample-5"
+}
+```
+
+## Useful links
+
+- The official docs for [Django REST framework](https://www.django-rest-framework.org/)
+- The [quick-start tutorial](https://www.django-rest-framework.org/tutorial/quickstart/): a simple API to allow admin users to view and edit the users and groups
+- The [Tutorial 1: Serialization](https://www.django-rest-framework.org/tutorial/1-serialization/):  a simple pastebin code highlighting Web API
+
 ## Original Readme
 
 Welcome USER_NAME,
