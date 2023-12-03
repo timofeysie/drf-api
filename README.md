@@ -581,6 +581,124 @@ class ProfileDetail(APIView):
 
 Now a proper form appears.
 
+## Authentication & permissions
+
+Just adding this to: drf_api\urls.py automagically adds a login button in the framework webpage view.
+
+```py
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('api-auth/', include('rest_framework.urls')),
+    ...
+```
+
+The rest framework  come with a set of commonly used permissions such as:
+
+- AllowAny
+- IsAuthenticated
+- IsAdminUser
+- custom permissions
+
+We use a custom permissions to return True only if the user is requesting their own profile.
+
+```PY
+from rest_framework import permissions
+
+class IsOwnerOrReadOnly(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return obj.owner == request.user
+```
+
+Next connect to the ProfileDetail view in profiles\views.py:
+
+```py
+class ProfileDetail(APIView):
+    serializer_class = ProfileSerializer
+    permission_classes = [IsOwnerOrReadOnly] <--
+
+    def get_object(self, pk):
+        try:
+            profile = Profile.objects.get(pk=pk)
+            self.check_object_permissions(self.request, profile) <--
+            return profile
+        except Profile.DoesNotExist:
+            raise Http404
+```
+
+Now the PUT form is only on the logged in users page.
+
+Next in the profile serializer add a field
+
+To get access to the currently logged in user in the request object in the serializer it has to be have to passed in with the context object in all ProfileSerializer in the view methods:
+
+```py
+serializer = ProfileSerializer(profiles, many=True, context={'request': request})
+```
+
+Then it is used in the profiles/serializers.py new get_is_owner method as well as add the field in the Meta class fields array:
+
+```py
+class ProfileSerializer(serializers.ModelSerializer):
+    owner = serializers.ReadOnlyField(source='owner.username')
+    is_owner = serializers.SerializerMethodField()
+
+    def get_is_owner(self, obj):
+        request = self.context['request']
+        return request.user == obj.owner
+    class Meta:
+        model = Profile
+        fields = [
+            'id', 'owner', 'created_at', 'updated_at', 'name',
+            'content', 'image', 'is_owner'
+        ]
+```
+
+Now the profiles API returns the field:
+
+```json
+[
+    {
+        "id": 2,
+        "owner": "zimof",
+        "created_at": "2023-12-03T05:15:38.942881Z",
+        "updated_at": "2023-12-03T05:15:38.942881Z",
+        "name": "",
+        "content": "",
+        "image": "https://res.cloudinary.com/dr3am91m4/image/upload/v1/media/../cld-sample-5",
+        "is_owner": false
+    },
+    {
+        "id": 1,
+        "owner": "timof",
+        "created_at": "2023-12-02T01:18:52.483047Z",
+        "updated_at": "2023-12-03T05:25:55.040490Z",
+        "name": "timof",
+        "content": "What it is",
+        "image": "https://res.cloudinary.com/dr3am91m4/image/upload/v1/media/../cld-sample-5",
+        "is_owner": true
+    }
+]
+```
+
+## Further work
+
+I wont be doing all the exercises and additional modules at this time.  Here is a review of what happens next without any code being added.
+
+### Post Serializer Challenge & Adding the Image_Filters
+
+The Post-Serializer Challenge to create a serializer for a new model.
+Then add an image filter to users uploaded images.
+
+This repo is just to get the basics of the rest framework, not a comprehensive run-though of the whole course.
+
+### Post module
+
+The API for listing, retrieving and updating posts will is similar to the profile views but also includes post creation and deletion.
+
+I guess it would include scaffolding like this: ```python manage.py startapp posts``` then adding urls.py.
+
 ## Useful links
 
 - The official docs for [Django REST framework](https://www.django-rest-framework.org/)
