@@ -780,7 +780,9 @@ In docs linked to, it says:
 
 All of this looks good.  So how to fix that error?
 
+```sh
 pip install django-allauth
+```
 
 However, I still see this migration error:
 
@@ -815,7 +817,51 @@ INSTALLED_APPS = [
 ]
 ```
 
-ChatGPT is unable to help anymore, so might have to seek out a human for this one.
+Running the server, there are a few dependencies that need installing:
+
+```sh
+pip install django-filter
+pip install django-cors-headers
+```
+
+Then this:
+
+```sh
+> python manage.py runserver     
+Watching for file changes with StatReloader
+Exception in thread django-main-thread:
+Traceback (most recent call last):
+  File "C:\Users\timof\AppData\Local\Programs\Python\Python310\lib\threading.py", line 1016, in _bootstrap_inner
+    self.run()
+  ...
+    raise ImproperlyConfigured("The SECRET_KEY setting must not be empty.")
+django.core.exceptions.ImproperlyConfigured: The SECRET_KEY setting must not be empty.
+```
+
+```py
+SECRET_KEY = 'your_secret_key_value'
+```
+
+You can generate a new secret key using Django's `django.core.management.utils.get_random_secret_key` function. Open a Python shell and run the following code:
+
+```py
+from django.core.management.utils import get_random_secret_key
+print(get_random_secret_key())
+```
+
+Copy the generated key and use it as your `SECRET_KEY` value. Make sure to keep this key secret and do not share it publicly.
+
+```sh
+> python manage.py runserver     
+Watching for file changes with StatReloader
+Exception in thread django-main-thread:
+Traceback (most recent call last):
+  File "C:\Users\timof\AppData\Local\Programs\Python\Python310\lib\threading.py", line 1016, in _bootstrap_inner
+    self.run()
+...
+    raise ImproperlyConfigured(
+django.core.exceptions.ImproperlyConfigured: allauth.account.middleware.AccountMiddleware must be added to settings.MIDDLEWARE
+```
 
 ## Useful links
 
